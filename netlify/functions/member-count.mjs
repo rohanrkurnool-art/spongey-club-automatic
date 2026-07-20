@@ -1,41 +1,54 @@
-const CLUB = 'spongey-club';
-const CHESS_API = `https://api.chess.com/pub/club/${CLUB}/members`;
+const CLUB = "spongey-club";
+const CHESS_API = `https://api.chess.com/pub/club/${CLUB}`;
 
 export default async () => {
   try {
     const response = await fetch(CHESS_API, {
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'SpongeyClubMemberPoster/1.0'
+        Accept: "application/json",
+        "User-Agent": "SpongeyClubMemberPoster/1.0 contact@example.com"
       }
     });
 
     if (!response.ok) {
-      return Response.json({ error: `Chess.com returned ${response.status}` }, { status: 502 });
+      return Response.json(
+        {
+          error: `Chess.com returned ${response.status}`,
+          requestedUrl: CHESS_API
+        },
+        { status: 502 }
+      );
     }
 
     const data = await response.json();
-    const groups = ['weekly', 'monthly', 'all_time'];
-    const usernames = new Set();
+    const count = Number(data.members_count);
 
-    for (const group of groups) {
-      const members = Array.isArray(data[group]) ? data[group] : [];
-      for (const member of members) {
-        if (member && typeof member.username === 'string') {
-          usernames.add(member.username.toLowerCase());
-        }
-      }
-    }
-
-    if (usernames.size < 1) {
-      return Response.json({ error: 'No members returned by Chess.com' }, { status: 502 });
+    if (!Number.isFinite(count)) {
+      return Response.json(
+        { error: "Chess.com did not return a valid member count" },
+        { status: 502 }
+      );
     }
 
     return Response.json(
-      { club: CLUB, count: usernames.size, updatedAt: new Date().toISOString() },
-      { headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' } }
+      {
+        club: CLUB,
+        count,
+        updatedAt: new Date().toISOString()
+      },
+      {
+        headers: {
+          "Cache-Control": "public, max-age=60, s-maxage=300"
+        }
+      }
     );
   } catch (error) {
-    return Response.json({ error: 'Unable to retrieve the live member count' }, { status: 500 });
+    return Response.json(
+      {
+        error: "Unable to retrieve the live member count",
+        details: error instanceof Error ? error.message : String(error)
+      },
+      { status: 500 }
+    );
   }
 };
