@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Spongey Club Live Members</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:transparent;overflow-x:hidden}
+    body{font-family:Arial,Helvetica,sans-serif}
+    .poster{position:relative;width:100%;max-width:560px;margin:0 auto;line-height:0;overflow:hidden;border-radius:18px}
+    .poster img{display:block;width:100%;height:auto}
+    .live-count{position:absolute;top:14.4%;left:8.4%;width:83.2%;min-height:11.8%;display:flex;align-items:center;justify-content:center;gap:1.5%;padding:1.2% 2%;border:4px solid #16488f;border-radius:22px;background:#ffe600;color:#0e3d7c;font-weight:900;font-size:clamp(21px,7vw,48px);line-height:1;white-space:nowrap;text-shadow:-2px -2px 0 #fff,2px -2px 0 #fff,-2px 2px 0 #fff,2px 2px 0 #fff,0 3px 0 #0b2e61}
+    .crown{font-size:.72em;text-shadow:none}
+    #count{display:inline-block;min-width:1.2em;text-align:center}
+    @media (max-width:380px){.live-count{border-width:3px;border-radius:16px;font-size:clamp(20px,7vw,31px);text-shadow:-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff,1px 1px 0 #fff,0 2px 0 #0b2e61}}
+  </style>
+</head>
+<body>
+  <main class="poster" aria-label="Spongey Club live member goal poster">
+    <img src="member-poster.png" alt="Help Spongey Club reach 50 members">
+    <div class="live-count" aria-live="polite">
+      <span class="crown">♕</span>
+      <span>Members: <strong id="count">22</strong> / 50</span>
+      <span class="crown">♕</span>
+    </div>
+  </main>
+<script>
+  const countEl = document.getElementById('count');
+  const FALLBACK_COUNT = 22;
+
+  function validCount(value){
+    const number = Number(value);
+    return Number.isInteger(number) && number > 0 && number < 100000 ? number : null;
+  }
+
+  function showCount(value){
+    const count = validCount(value) ?? validCount(localStorage.getItem('spongeyClubMemberCount')) ?? FALLBACK_COUNT;
+    countEl.textContent = String(count);
+    localStorage.setItem('spongeyClubMemberCount', String(count));
+  }
+
+  async function updateMemberCount(){
+    try{
+      const response = await fetch('/api/member-count?t=' + Date.now(), {cache:'no-store'});
+      if(!response.ok) throw new Error('Live count request failed');
+      const data = await response.json();
+      const count = validCount(data.count);
+      if(count === null) throw new Error('Invalid member count');
+      showCount(count);
+    }catch(error){
+      showCount(FALLBACK_COUNT);
+      console.warn('Using saved/fallback count until the next automatic retry.', error);
+    }
+  }
+
+  showCount(FALLBACK_COUNT);
+  updateMemberCount();
+  setInterval(updateMemberCount, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) updateMemberCount(); });
+</script>
+</body>
+</html>
